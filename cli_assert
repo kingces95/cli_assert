@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-source /dev/stdin < <(cli loader)
-
-main() {
-    cli::export assert
-}
+source /dev/stdin < <(cli loader --library)
 
 assert::fail() {
   printf "✖ %s\n" "$@" >&2
@@ -261,6 +257,10 @@ assert::le() {
     [ "${#msg}" -gt 0 ] && assert::fail "$first <= $second :: $msg" || true
     return 1
   fi
+}
+
+main() {
+    cli::export assert
 }
 
 cli::load "$@"
