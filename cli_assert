@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
-source /dev/stdin < <(cli loader)
-cli::import cli initialize
-cli::import cli export
+source $(cli loader)
 
-main() {
+export() {
 
   assert::fail() {
     printf "✖ %s\n" "$@" >&2
