@@ -8,22 +8,40 @@ export() {
   }
 
   assert::pipe_eq() (
-    while read line; do
-      assert::eq "$line" "${1-}" "value from pipe != arg"
+    : ${arg_eq:='assert::eq'}
+
+    while read ${arg_read_option-}; do
+      if (( $# == 0 )); then
+        assert::fail "More actual values than expected values at '${REPLY}'."
+      fi
+
+      ${arg_eq} "${REPLY}" "${1-}" "actual != expected"
       shift
     done
 
     if (( $# != 0 )); then
-      assert::fail "Unexpected end of pipe at '$1'"
+      assert::fail "More expected values than actual values at '$1'."
     fi
   )
 
-  assert::pipe_eq_exact() (
-    IFS= assert::pipe_eq "$@"
+  assert::pipe_records_eq() (
+    arg_eq=assert::records_eq assert::pipe_eq "$@"
   )
 
+  assert::pipe_eq_exact() (
+    IFS= arg_read_option='-r' assert::pipe_eq "$@"
+  )
+
+  assert::records_eq() {
+    local actual=( $1 )
+    local expected=( $2 )
+    local message="$3"
+
+    assert::array_eq actual expected "${message}"
+  }
+
   assert::fails() {
-    local statement="$1"
+    local statement="$1 2> /dev/null"
     local msg=${2:-''}
 
     if (eval $statement); then
@@ -103,21 +121,21 @@ export() {
   }
 
   assert::array_eq() {
-    declare -n __expected=$1
-    declare -n __actual=$2
+    declare -n __actual=$1
+    declare -n __expected=$2
 
     local msg=${3:-''}
 
     local expected_length=${#__expected[@]}
     local actual_length=${#__actual[@]}
     if (( expected_length != actual_length )); then
-      assert::fail "array lengths differ :: ${expected_length} != ${actual_length} :: $msg"
+      assert::fail "expected/actual lengths differs :: ${expected_length} != ${actual_length} :: $msg"
       return 1
     fi
 
     for i in "${!__expected[@]}"; do 
       if [[ "${__expected[$i]}" != "${__actual[$i]}" ]]; then
-        assert::fail "array values differ at index $i :: '${__expected[$i]}' != '${__actual[$i]}' :: $msg"
+        assert::fail "expected differs from actual at $i :: '${__expected[$i]}' != '${__actual[$i]}' :: $msg"
         return 1
       fi
     done
