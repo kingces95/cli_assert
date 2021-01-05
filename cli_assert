@@ -74,7 +74,16 @@ export() {
     local msg=${1:-''}
 
     if (( exit_code != 0 )); then
-      assert::fail "Exited with ${exit_code} :: ${msg}"
+      assert::fail "Expected success but actually exited with ${exit_code} :: ${msg}"
+    fi
+  }
+
+  assert::failed() {
+    local exit_code=$?
+    local msg=${1:-''}
+
+    if (( exit_code == 0 )); then
+      assert::fail "Expected failure but actually exited with ${exit_code} :: ${msg}"
     fi
   }
 
