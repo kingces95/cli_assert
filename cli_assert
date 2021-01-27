@@ -40,6 +40,14 @@ export() {
     assert::array_eq actual expected "${message}"
   }
 
+  assert::pipe_fails() {
+    local msg=${1:-''}
+
+    if (source /dev/stdin 2> /dev/null); then
+      assert::fail "Unexpected succeeded, expected failure :: ${msg}"
+    fi
+  }
+
   assert::fails() {
     local statement="$1 2> /dev/null"
     local msg=${2:-''}
