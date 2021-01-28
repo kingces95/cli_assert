@@ -5,6 +5,7 @@ export() {
 
   assert::fail() {
     printf "✖ %s\n" "$@" >&2
+    exit 1
   }
 
   assert::pipe_eq() (
