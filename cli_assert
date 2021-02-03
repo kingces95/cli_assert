@@ -5,6 +5,15 @@ export() {
 
   assert::fail() {
     printf "✖ %s\n" "$@" >&2
+    
+    unset IFS
+
+    local i=0
+    while read line frame file < <(caller $i); do
+      printf '%-40s %-30s:%s\n' "${frame}" "${file}" "${line}"
+      i=$(( i + 1 ))
+    done 2>&1
+
     exit 1
   }
 
@@ -26,11 +35,26 @@ export() {
   )
 
   assert::pipe_records_eq() (
-    arg_eq=assert::records_eq assert::pipe_eq "$@"
+    while read -a actual; do
+      if (( $# == 0 )); then
+        assert::fail "More actual records than expected records at '${REPLY}'."
+      fi
+
+      read -a expected <<< "${1-}"
+
+      assert::array_eq actual expected "actual != expected"
+      shift
+    done
+
+    if (( $# != 0 )); then
+      assert::fail "More expected records than actual records at '$1'."
+    fi
   )
 
   assert::pipe_eq_exact() (
-    IFS= arg_read_option='-r' assert::pipe_eq "$@"
+    IFS= \
+    arg_read_option='-r' \
+      assert::pipe_eq "$@"
   )
 
   assert::records_eq() {
@@ -144,16 +168,16 @@ export() {
 
     local msg=${3:-''}
 
-    local expected_length=${#__expected[@]}
     local actual_length=${#__actual[@]}
+    local expected_length=${#__expected[@]}
     if (( expected_length != actual_length )); then
-      assert::fail "expected/actual lengths differs :: ${expected_length} != ${actual_length} :: $msg"
+      assert::fail "actual/expected lengths differs :: ${actual_length} != ${expected_length} :: $msg"
       return 1
     fi
 
     for i in "${!__expected[@]}"; do 
       if [[ "${__expected[$i]}" != "${__actual[$i]}" ]]; then
-        assert::fail "expected differs from actual at $i :: '${__expected[$i]}' != '${__actual[$i]}' :: $msg"
+        assert::fail "actual differs from expected at $i :: '${__actual[$i]}' != '${__expected[$i]}' :: $msg"
         return 1
       fi
     done
