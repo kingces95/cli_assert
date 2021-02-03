@@ -324,4 +324,4 @@ export() {
   cli::export assert
 }
 
-cli::load "$@"
+cli::main "$@"
