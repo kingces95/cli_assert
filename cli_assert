@@ -74,12 +74,11 @@ export() {
   }
 
   assert::fails() {
-    local statement="$1 2> /dev/null"
-    local msg=${2:-''}
-
-    if (eval $statement); then
-      assert::fail "\"$1\" succeeded, expected failure :: ${msg}"
-    fi
+    set +e
+    eval "$1 2>&1 >/dev/null" \
+      | assert::error_message "${@:2}"
+    assert::failed
+    set -e  
   }
 
   assert::file_does_not_exist() {
@@ -127,6 +126,11 @@ export() {
 
     (eval $statement)
     assert::ok
+  }
+
+  assert::error_message() {
+      read
+      assert::eq "${REPLY}" "$*"
   }
 
   assert::eq() {
