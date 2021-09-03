@@ -8,7 +8,7 @@ cli::meta::declare() {
 main() {
 
   assert::fail() {
-    printf "✖ %s\n" "$@" >&2
+    printf "✖ %s\n" "$*" >&2
     
     # unset IFS
 
@@ -21,7 +21,7 @@ main() {
     exit 1
   }
 
-  assert::pipe_eq() (
+  assert::pipe_eq() {
     : ${arg_eq:='assert::eq'}
 
     while read ${arg_read_option-}; do
@@ -36,7 +36,9 @@ main() {
     if (( $# != 0 )); then
       assert::fail "More expected values than actual values at '$1'."
     fi
-  )
+
+    return
+}
 
   assert::pipe_records_eq() (
     while read -a actual; do
@@ -77,33 +79,47 @@ main() {
     fi
   }
 
+  assert::returns() {
+      assert::fails "$1" $2
+  }
+
   assert::fails() {
     set +e
     # capture errors, ignore normal output
     eval "$1 2>&1 >/dev/null" \
-      | assert::error_message "${@:2}"
-    assert::failed
+      | assert::error_message "${@:3}"
+    assert::exit_code $2 "$1"
     set -e  
   }
 
   assert::file_does_not_exist() {
     ! test -f "$1"
-    assert::ok "$2"
+    assert::ok "${2-"ASSERT: File does not exist: $1"}"
   }
 
   assert::non_empty_file_exists() {
     test -s "$1"
-    assert::ok "$2"
+    assert::ok "${2-"ASSERT: Non-empty file exist: $1"}"
   }
 
   assert::empty_file_exists() {
     test -f "$1" && ! test -s "$1"
-    assert::ok "$2"
+    assert::ok "${2-"ASSERT: Empty file exist: $1"}"
   }
 
   assert::file_exists() {
     test -f "$1"
-    assert::ok "$2"
+    assert::ok "${2-"ASSERT: File exist: $1"}"
+  }
+
+  assert::directory_exists() {
+    test -d "$1"
+    assert::ok "${2-"ASSERT: Directory exist: $1"}"
+  }
+
+  assert::directory_does_not_exist() {
+    ! test -d "$1"
+    assert::ok "${2-"ASSERT: Directory does not exist: $1"}"
   }
 
   assert::ok() {
@@ -120,17 +136,19 @@ main() {
     local msg=${1:-''}
 
     if (( exit_code == 0 )); then
-      assert::fail "Expected failure but actually exited with ${exit_code} :: ${msg}"
+      assert::fail "Expected non-zero error code" \
+        "but actually exited with ${exit_code}: ${msg}"
     fi
   }
 
-  assert::returns() {
-    local statement="$1"
-    local expected_exit_code="$2"
-    local msg=${3:-''}
+  assert::exit_code() {
+    local exit_code=$?
+    local expected_error_code=$1
 
-    (eval $statement)
-    assert::ok
+    if (( exit_code != expected_error_code )); then
+      assert::fail "Expected error code ${expected_error_code}" \
+        "but actually exited with ${exit_code}: ${@:2}"
+    fi
   }
 
   assert::error_message() {
@@ -199,10 +217,10 @@ main() {
     actual="$1"
 
     if [ "$#" -ge 2 ]; then
-      msg="$2"
+      msg="${2-}"
     fi
 
-    assert::eq "" "$actual" "$msg"
+    assert::eq "" "${actual}" "${msg-}"
     return "$?"
   }
 
